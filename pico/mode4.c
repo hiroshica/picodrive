@@ -198,48 +198,6 @@ static void draw_strip_high(const unsigned short *nametab, int dx, int cells, in
     code = nametab[tilex_ty_prio & 0x1f];
     if (code == blank)
       continue;
-      /*
-    if ((code ^ tilex_ty_prio) & 0x1000) // priority differs?
-      continue;
-      */
-
-    if (code != oldcode) {
-      oldcode = code;
-      // Get tile address/2:
-      addr = (code & 0x1ff) << 4;
-      addr += tilex_ty_prio >> 16;
-      if (code & 0x0400)
-        addr ^= 0xe; // Y-flip
-
-      pal = (code>>7) & 0x10;
-    }
-
-    pack = *(unsigned int *)(PicoMem.vram + addr); /* Get 4 bitplanes / 8 pixels */
-    /*
-    if (pack == 0) {
-      blank = code;
-      continue;
-    }
-    */
-    if (code & 0x0200) TileFlipM4Low(dx, pack, pal);
-    else               TileNormM4Low(dx, pack, pal);
-  }
-}
-// tilex_ty_prio merged to reduce register pressure
-static void draw_strip_high(const unsigned short *nametab, int dx, int cells, int tilex_ty_prio)
-{
-  int oldcode = -1, blank = -1; // The tile we know is blank
-  int addr = 0, pal = 0;
-  
-  // Draw tiles across screen:
-  for (; cells > 0; dx += 8, tilex_ty_prio++, cells--)
-  {
-    unsigned int pack;
-    int code;
-
-    code = nametab[tilex_ty_prio & 0x1f];
-    if (code == blank)
-      continue;
     if ((code ^ tilex_ty_prio) & 0x1000) // priority differs?
       continue;
 
