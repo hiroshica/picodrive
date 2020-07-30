@@ -1,21 +1,6 @@
 TARGET ?= PicoDrive
 DEBUG ?= 0
-CFLAGS += -Wall -ggdb -ffunction-sections -fdata-sections
 CFLAGS += -I.
-ifeq "$(DEBUG)" "0"
-CFLAGS += -O3 -DNDEBUG
-endif
-
-# This is actually needed, believe me.
-# If you really have to disable this, set NO_ALIGN_FUNCTIONS elsewhere.
-ifndef NO_ALIGN_FUNCTIONS
-CFLAGS += -falign-functions=2
-endif
-LDFLAGS += -Wl,--gc-sections
-
-# profiling
-pprof ?= 0
-gperf ?= 0
 
 all: config.mak target_
 
@@ -32,6 +17,27 @@ config.mak:
 endif
 else # NO_CONFIG_MAK
 config.mak:
+endif
+
+# This is actually needed, believe me.
+# If you really have to disable this, set NO_ALIGN_FUNCTIONS elsewhere.
+ifndef NO_ALIGN_FUNCTIONS
+CFLAGS += -falign-functions=2
+endif
+
+# profiling
+pprof ?= 0
+gperf ?= 0
+
+ifneq ("$(PLATFORM)", "libretro")
+	CFLAGS += -Wall -g
+ifneq ($(findstring gcc,$(CC)),)
+	CFLAGS += -ffunction-sections -fdata-sections
+	LDFLAGS += -Wl,--gc-sections
+endif
+ifeq "$(DEBUG)" "0"
+	CFLAGS += -O3 -DNDEBUG
+endif
 endif
 
 ifeq ("$(PLATFORM)",$(filter "$(PLATFORM)","gp2x" "opendingux" "rpi1"))
@@ -57,26 +63,12 @@ asm_cdmemory ?= 1
 asm_mix ?= 1
 asm_32xdraw ?= 1
 asm_32xmemory ?= 1
-else ifneq (,$(findstring 86,$(ARCH)))
+else
 use_fame ?= 1
 use_cz80 ?= 1
+ifneq (,$(filter x86% i386% mips% aarch% riscv% powerpc% ppc%, $(ARCH)))
 use_sh2drc ?= 1
-else ifneq (,$(findstring mips,$(ARCH)))
-use_fame ?= 1
-use_cz80 ?= 1
-use_sh2drc ?= 1
-else ifneq (,$(findstring aarch64,$(ARCH)))
-use_fame ?= 1
-use_cz80 ?= 1
-use_sh2drc ?= 1
-else ifneq (,$(findstring riscv,$(ARCH)))
-use_fame ?= 1
-use_cz80 ?= 1
-use_sh2drc ?= 1
-else ifneq (,$(findstring powerpc,$(ARCH)))
-use_fame ?= 1
-use_cz80 ?= 1
-use_sh2drc ?= 1
+endif
 endif
 
 -include Makefile.local
@@ -115,6 +107,7 @@ OBJS += platform/libpicofe/gl_platform.o
 USE_FRONTEND = 1
 endif
 ifeq "$(PLATFORM)" "generic"
+CFLAGS += -DSDL_OVERLAY_2X
 OBJS += platform/linux/emu.o platform/linux/blit.o # FIXME
 OBJS += platform/common/plat_sdl.o
 OBJS += platform/libpicofe/plat_sdl.o platform/libpicofe/in_sdl.o
@@ -218,7 +211,7 @@ LDFLAGS += -Wl,-Map=$(TARGET).map
 endif
 
 
-target_: pico/pico_int_offs.h $(TARGET)
+target_: $(TARGET)
 
 clean:
 	$(RM) $(TARGET) $(OBJS) pico/pico_int_offs.h
@@ -235,7 +228,7 @@ pprof: platform/linux/pprof.c
 	$(CC) $(CFLAGS) -O2 -ggdb -DPPROF -DPPROF_TOOL -I../../ -I. $^ -o $@ $(LDFLAGS) $(LDLIBS)
 
 pico/pico_int_offs.h: tools/mkoffsets.sh
-	make -C tools/ XCC="$(CC)" XCFLAGS="$(CFLAGS)"
+	make -C tools/ XCC="$(CC)" XCFLAGS="$(CFLAGS)" XPLATFORM="$(platform)"
 
 .s.o:
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -271,6 +264,9 @@ endif
 
 pico/carthw_cfg.c: pico/carthw.cfg
 	tools/make_carthw_c $< $@
+
+# preprocessed asm files most probably include the offsets file
+$(filter %.S,$(SRCS_COMMON)): pico/pico_int_offs.h
 
 # random deps
 pico/carthw/svp/compiler.o : cpu/drc/emit_arm.c

@@ -22,6 +22,9 @@ PicoDrive.opk
 pico_int_offs.h
 amalgamate
 textfilter
+<<<<<<< HEAD
 .vscode
 
+=======
+>>>>>>> upstream/master
 

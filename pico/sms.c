@@ -199,12 +199,13 @@ static void z80_sms_out(unsigned short a, unsigned char d)
       case 0x01:
         Pico.ms.io_ctl = d;
         break;
-    case 0x40:
-    case 0x41:
-      if ((d & 0x90) == 0x90)
-        PsndDoPSG(Pico.m.scanline);
-      SN76496Write(d);
-      break;
+
+      case 0x40:
+      case 0x41:
+        if ((d & 0x90) == 0x90)
+          PsndDoPSG(Pico.m.scanline);
+        SN76496Write(d);
+        break;
 
       case 0x80:
         vdp_data_write(d);

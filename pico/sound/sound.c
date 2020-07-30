@@ -85,7 +85,6 @@ void PsndRerate(int preserve_state)
     OPLL_reset(opll);
   }
 
-  
   if (state)
     free(state);
 
@@ -193,12 +192,12 @@ PICO_INTERNAL void PsndDoYM2413(int line_to)
 {
   int pos, len;
   int stereo = 0;
+  short *buf;
 
   // Q16, number of samples since last call
   len = ((line_to+1) * Pico.snd.smpl_mult) - Pico.snd.ym2413_pos;
-  if (len <= 0){
+  if (len <= 0)
     return;
-  }
 
   // update position and calculate buffer offset and length
   pos = (Pico.snd.ym2413_pos+0x8000) >> 16;
@@ -208,22 +207,16 @@ PICO_INTERNAL void PsndDoYM2413(int line_to)
   if (!PicoIn.sndOut || !(PicoIn.opt & POPT_EN_YM2413))
     return;
 
-  // fill buffer
   if (PicoIn.opt & POPT_EN_STEREO) {
     stereo = 1;
     pos <<= 1;
   }
 
-  if (PicoIn.opt & POPT_EN_YM2413){
-    short *buf = PicoIn.sndOut + pos;
-    int iI;
-    for (iI = 0; iI < len; iI+= (1<<stereo)) {
-      int16_t getdata = OPLL_calc(opll);
-      *(buf +iI + 0) += getdata;
-      if (PicoIn.opt & POPT_EN_STEREO) {
-          *(buf +iI + 1) += getdata;
-      }
-    }
+  buf = PicoIn.sndOut + pos;
+  while (len-- > 0) {
+    int16_t getdata = OPLL_calc(opll) * 3;
+    *buf++ += getdata;
+    buf += stereo; // only left for stereo, to be mixed to right later
   }
 }
 #endif
@@ -236,7 +229,6 @@ void YM2413_dataWrite(unsigned data){
 }
 
 
-
 PICO_INTERNAL void PsndDoFM(int cyc_to)
 {
   int pos, len;
@@ -245,8 +237,8 @@ PICO_INTERNAL void PsndDoFM(int cyc_to)
   // Q16, number of samples since last call
   len = (cyc_to * Pico.snd.clkl_mult) - Pico.snd.fm_pos;
 
-  // don't do this too often (about every 4th scanline)
-  if (len >> 20 <= PicoIn.sndRate >> 12)
+  // don't do this too often (about once every canline)
+  if (len >> 16 <= PicoIn.sndRate >> 10)
     return;
 
   // update position and calculate buffer offset and length
@@ -325,7 +317,7 @@ PICO_INTERNAL void PsndClear(void)
   if (!(PicoIn.opt & POPT_EN_FM))
     memset32(PsndBuffer, 0, PicoIn.opt & POPT_EN_STEREO ? len*2 : len);
   // drop pos remainder to avoid rounding errors (not entirely correct though)
-  Pico.snd.dac_pos = Pico.snd.fm_pos = Pico.snd.psg_pos = Pico.snd.ym2413_pos =0;
+  Pico.snd.dac_pos = Pico.snd.fm_pos = Pico.snd.psg_pos = Pico.snd.ym2413_pos = 0;
 }
 
 
@@ -448,14 +440,25 @@ static int PsndRenderMS(int offset, int length)
     }
   }
 
+  if (length-ym2413len > 0) {
+    short *ym2413buf = PicoIn.sndOut + (ym2413len << stereo);
+    Pico.snd.ym2413_pos += (length-ym2413len) << 16;
+    int len = (length-ym2413len);
+    if (PicoIn.opt & POPT_EN_YM2413){
+      while (len-- > 0) {
+        int16_t getdata = OPLL_calc(opll) * 3;
+        *ym2413buf += getdata;
+        ym2413buf += 1<<stereo;
+      }
+    }
+  }
+
   // upmix to "stereo" if needed
   if (PicoIn.opt & POPT_EN_STEREO) {
     int i;
     short *p;
     for (i = length, p = (short *)PicoIn.sndOut; i > 0; i--, p+=2)
-    {
-      *(p + 1) |= *p;
-    }
+      *(p + 1) = *p;
   }
 
   pprof_end(sound);

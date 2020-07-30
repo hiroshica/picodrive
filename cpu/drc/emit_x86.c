@@ -349,6 +349,15 @@ enum { xAX = 0, xCX, xDX, xBX, xSP, xBP, xSI, xDI,	// x86-64,i386 common
 	} else	emith_or_r_r_r(d, s1, s2); \
 } while (0)
 
+#define emith_eor_r_r_r_lsr(d, s1, s2, lsrimm) do { \
+	if (lsrimm) { \
+		int tmp_ = rcache_get_tmp(); \
+		emith_lsr(tmp_, s2, lsrimm); \
+		emith_eor_r_r_r(d, s1, tmp_); \
+		rcache_free_tmp(tmp_); \
+	} else	emith_eor_r_r_r(d, s1, s2); \
+} while (0)
+
 // _r_r_shift
 #define emith_or_r_r_lsl(d, s, lslimm) \
 	emith_or_r_r_r_lsl(d, d, s, lslimm)
@@ -733,7 +742,7 @@ enum { xAX = 0, xCX, xDX, xBX, xSP, xBP, xSI, xDI,	// x86-64,i386 common
 	/* mov r <-> [ebp+#offs] */ \
 	if ((offs) == 0) { \
 		emith_deref_modrm(op, 0, r, rs); \
-	} else if (abs(offs) >= 0x80) { \
+	} else if ((s32)(offs) < -0x80 || (s32)(offs) >= 0x80) { \
 		emith_deref_modrm(op, 2, r, rs); \
 		EMIT(offs, u32); \
 	} else { \
@@ -915,8 +924,10 @@ enum { xAX = 0, xCX, xDX, xBX, xSP, xBP, xSI, xDI,	// x86-64,i386 common
 #define emith_call_cond(cond, ptr) \
 	emith_call(ptr)
 
-#define emith_call_reg(r) \
-	EMIT_OP_MODRM(0xff, 3, 2, r)
+#define emith_call_reg(r) do { \
+	EMIT_REX_IF(0, 0, r); \
+	EMIT_OP_MODRM(0xff, 3, 2, (r)&7); \
+} while (0)
 
 #define emith_call_ctx(offs) do { \
 	EMIT_OP_MODRM(0xff, 2, 2, CONTEXT_REG); \
@@ -934,8 +945,10 @@ enum { xAX = 0, xCX, xDX, xBX, xSP, xBP, xSI, xDI,	// x86-64,i386 common
 	emith_deref_modrm(0x03, 0, r, xSP); /* add r, [xsp] */ \
 } while (0)
 
-#define emith_jump_reg(r) \
-	EMIT_OP_MODRM(0xff, 3, 4, r)
+#define emith_jump_reg(r) do { \
+	EMIT_REX_IF(0, 0, r); \
+	EMIT_OP_MODRM(0xff, 3, 4, (r)&7); \
+} while (0)
 
 #define emith_jump_ctx(offs) do { \
 	EMIT_OP_MODRM(0xff, 2, 4, CONTEXT_REG); \
@@ -1075,7 +1088,7 @@ enum { xAX = 0, xCX, xDX, xBX, xSP, xBP, xSI, xDI,	// x86-64,i386 common
 #define PARAM_REGS	{ xCX, xDX, xR8, xR9 }
 #define	PRESERVED_REGS	{ xSI, xDI, xR12, xR13, xR14, xR15, xBX, xBP }
 #define TEMPORARY_REGS	{ xAX, xR10, xR11 }
-#define STATIC_SH2_REGS { SHR_SR,xBX , SHR_R(0),xR15 , SH2_R(1),xR14 }
+#define STATIC_SH2_REGS { SHR_SR,xBX , SHR_R(0),xR15 , SHR_R(1),xR14 }
 
 #define host_arg2reg(rd, arg) \
 	switch (arg) { \

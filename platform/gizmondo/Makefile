@@ -99,6 +99,9 @@ ifeq "$(profile)" "1"
 endif
 
 
+../../tools/textfilter: ../../tools/textfilter.c
+	make -C ../../tools/ textfilter
+
 readme.txt: ../../tools/textfilter ../base_readme.txt
 	../../tools/textfilter ../base_readme.txt $@ GIZ
 

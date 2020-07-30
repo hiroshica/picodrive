@@ -31,7 +31,7 @@ unsigned short scan_block(uint32_t base_pc, int is_slave,
 		unsigned char *op_flags, uint32_t *end_pc,
 		uint32_t *base_literals, uint32_t *end_literals);
 
-#if defined(DRC_SH2) && defined(__GNUC__)
+#if defined(DRC_SH2) && defined(__GNUC__) && !defined(__clang__)
 // direct access to some host CPU registers used by the DRC if gcc is used.
 // XXX MUST match SHR_SR definitions in cpu/drc/emit_*.c; should be moved there
 // XXX yuck, there's no portable way to determine register size. Use long long
@@ -72,11 +72,11 @@ extern void REGPARM(1) (*sh2_drc_restore_sr)(SH2 *sh2);
 #define	DRC_DECLARE_SR	register long		_sh2_sr asm(DRC_SR_REG)
 #endif
 #define DRC_SAVE_SR(sh2) \
-    if (likely((sh2->state&(SH2_STATE_RUN|SH2_STATE_SLEEP)) == SH2_STATE_RUN)) \
+    if (likely(sh2->state & SH2_IN_DRC)) \
 	sh2->sr = (s32)_sh2_sr
 //      sh2_drc_save_sr(sh2)
 #define DRC_RESTORE_SR(sh2) \
-    if (likely((sh2->state&(SH2_STATE_RUN|SH2_STATE_SLEEP)) == SH2_STATE_RUN)) \
+    if (likely(sh2->state & SH2_IN_DRC)) \
 	_sh2_sr = (s32)sh2->sr
 //      sh2_drc_restore_sr(sh2)
 #else
