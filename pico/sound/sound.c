@@ -420,24 +420,8 @@ static int PsndRenderMS(int offset, int length)
   if (length-psglen > 0) {
     short *psgbuf = PicoIn.sndOut + (psglen << stereo);
     Pico.snd.psg_pos += (length-psglen) << 16;
-    if (PicoIn.opt & POPT_EN_PSG){
+    if (PicoIn.opt & POPT_EN_PSG)
       SN76496Update(psgbuf, length-psglen, stereo);
-    }
-  }
-
-  if (length-ym2413len > 0) {
-    short *ym2413buf = PicoIn.sndOut + (ym2413len << stereo);
-    Pico.snd.ym2413_pos += (length-ym2413len) << 16;
-    int len = (length-ym2413len);
-    if (PicoIn.opt & POPT_EN_YM2413){
-      int iI;
-      for (iI = len; iI > 0; iI -= 1) {
-        float getdata = (float)OPLL_calc(opll);
-        getdata *= 3;
-        *ym2413buf += (short)getdata;
-        ym2413buf += 1<<stereo;
-      }
-    }
   }
 
   if (length-ym2413len > 0) {

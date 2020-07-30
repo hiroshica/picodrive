@@ -346,12 +346,6 @@ void PicoFrameMS(void)
   for (y = 0; y < lines; y++)
   {
     pv->v_counter = Pico.m.scanline = y;
-
-    //if(y%8 == 0){
-    if(y%224 == 0){
-      //PsndDoYM2413(Pico.m.scanline);
-    }
-
     if (y > 218)
       pv->v_counter = y - 6;
 
@@ -377,7 +371,6 @@ void PicoFrameMS(void)
         z80_int_assert(1);
       }
     }
-
 
     cycles_aim += cycles_line;
     cycles_done += z80_run((cycles_aim - cycles_done) >> 8) << 8;
