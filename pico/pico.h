@@ -10,6 +10,7 @@
 #ifndef PICO_H
 #define PICO_H
 
+#include <stdint.h> // [u]int<n>_t
 #include <stdlib.h> // size_t
 
 #ifdef __cplusplus
@@ -196,7 +197,7 @@ void PicoDrawSetCallbacks(int (*begin)(unsigned int num), int (*end)(unsigned in
 void vidConvCpyRGB565(void *to, void *from, int pixels);
 #endif
 void PicoDoHighPal555(int sh, int line, struct PicoEState *est);
-// internals
+// internals, NB must keep in sync with ASM draw functions
 #define PDRAW_SPRITES_MOVED (1<<0) // SAT address modified
 #define PDRAW_WND_DIFF_PRIO (1<<1) // not all window tiles use same priority
 #define PDRAW_PARSE_SPRITES (1<<2) // SAT needs parsing
